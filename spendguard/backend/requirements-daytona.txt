@@ -1,0 +1,4 @@
+# Optional: real Daytona cloud sandbox executor.
+# Install AFTER requirements.txt:  pip install -r requirements-daytona.txt
+# If this is not installed, SpendGuard falls back to the local executor.
+daytona

@@ -1,0 +1,38 @@
+{
+  "delegated_by": "Raj",
+  "agent_id": "spendguard-agent-001",
+  "task_intent": "event procurement",
+  "budget_limit_usd": 100,
+  "approved_vendors": [
+    "SnackHub",
+    "GoodBites Catering",
+    "EventSuppliesCo"
+  ],
+  "allowed_actions": [
+    "pay_invoice",
+    "create_order"
+  ],
+  "requires_approval": [
+    "pay_amount_over_budget",
+    "pay_new_vendor"
+  ],
+  "blocked_risk_flags": [
+    "prompt_injection",
+    "secret_exfiltration_request",
+    "credential_forwarding_request",
+    "external_attacker_destination",
+    "print_env_request"
+  ],
+  "credential_policy": {
+    "payment_credential_name": "STRIPE_SECRET_KEY",
+    "credential_source": "1Password/runtime",
+    "visible_to_model": false,
+    "visible_to_frontend": false,
+    "visible_to_audit_logs": false
+  },
+  "runtime_policy": {
+    "executor": "daytona",
+    "create_sandbox_only_after_policy_approval": true,
+    "destroy_sandbox_after_execution": true
+  }
+}

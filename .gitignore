@@ -1,0 +1,29 @@
+# Protect real secrets — NEVER commit .env (contains live API keys)
+.env
+*.env
+!*.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+.cache/
+
+# Runtime data
+spendguard/backend/data/audit_log.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

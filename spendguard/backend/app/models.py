@@ -169,3 +169,42 @@ class AgentRunResponse(BaseModel):
 
 class RunAgentRequest(BaseModel):
     request_id: str
+
+
+# --------------------------------------------------------------------------- #
+# Tool-calling agent (autonomous mode + attack arena)
+# --------------------------------------------------------------------------- #
+class AgentEvent(BaseModel):
+    """One step in the autonomous agent's run. `actor` distinguishes the agent
+    proposing an action from the gateway adjudicating it."""
+
+    actor: Literal["agent", "gateway", "system"]
+    kind: Literal["message", "tool_call", "verdict", "result"]
+    title: str
+    detail: str = ""
+    status: TraceStatus = "info"
+    tool: Optional[str] = None
+
+
+class AgentActResult(BaseModel):
+    request_id: Optional[str] = None
+    title: str
+    created_at: str
+    agent_summary: str = ""
+    used_llm: bool = False
+    events: list[AgentEvent] = Field(default_factory=list)
+    risk_flags: list[RiskFlag] = Field(default_factory=list)
+    decision: Decision
+    reasons: list[str] = Field(default_factory=list)
+    execution: ExecutionResult
+    authority: AuthorityView
+    audit_id: str
+
+
+class RunAgentActRequest(BaseModel):
+    """Either reference a seeded request by id, or supply a custom body (the
+    attack arena — a judge types their own adversarial message)."""
+
+    request_id: Optional[str] = None
+    title: Optional[str] = None
+    body: Optional[str] = None

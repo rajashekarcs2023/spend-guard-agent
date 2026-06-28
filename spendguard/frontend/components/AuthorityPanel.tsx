@@ -1,6 +1,12 @@
 "use client";
 
-import type { AgentRunResponse, AuditEntry } from "@/lib/types";
+import type {
+  AuditEntry,
+  AuthorityView,
+  ExecutionResult,
+} from "@/lib/types";
+
+type AuthorityResult = { authority: AuthorityView; execution: ExecutionResult };
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
@@ -37,7 +43,7 @@ export default function AuthorityPanel({
   result,
   audit,
 }: {
-  result: AgentRunResponse | null;
+  result: AuthorityResult | null;
   audit: AuditEntry[];
 }) {
   const a = result?.authority;

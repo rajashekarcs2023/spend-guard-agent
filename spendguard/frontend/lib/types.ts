@@ -88,6 +88,30 @@ export interface AgentRunResponse {
   audit_id: string;
 }
 
+export interface AgentEvent {
+  actor: "agent" | "gateway" | "system";
+  kind: "message" | "tool_call" | "verdict" | "result";
+  title: string;
+  detail: string;
+  status: TraceStatus;
+  tool: string | null;
+}
+
+export interface AgentActResult {
+  request_id: string | null;
+  title: string;
+  created_at: string;
+  agent_summary: string;
+  used_llm: boolean;
+  events: AgentEvent[];
+  risk_flags: RiskFlag[];
+  decision: Decision;
+  reasons: string[];
+  execution: ExecutionResult;
+  authority: AuthorityView;
+  audit_id: string;
+}
+
 export interface AuditEntry {
   id: string;
   request_id: string;

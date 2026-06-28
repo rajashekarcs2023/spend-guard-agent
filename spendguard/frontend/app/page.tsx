@@ -1,28 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import AgentTracePanel from "@/components/AgentTracePanel";
 import AuthorityPanel from "@/components/AuthorityPanel";
 import RequestPanel from "@/components/RequestPanel";
-import TracePanel from "@/components/TracePanel";
 import { api } from "@/lib/api";
-import type {
-  AgentRunResponse,
-  AuditEntry,
-  Decision,
-  SeedRequest,
-} from "@/lib/types";
+import type { AgentActResult, AuditEntry, Decision, SeedRequest } from "@/lib/types";
+
+const EVENT_DELAY = 480; // ms between revealed trace events
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function Home() {
   const [requests, setRequests] = useState<SeedRequest[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
-  const [result, setResult] = useState<AgentRunResponse | null>(null);
+  const [result, setResult] = useState<AgentActResult | null>(null);
+  const [visibleCount, setVisibleCount] = useState(0);
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [thinking, setThinking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
-  const [opLive, setOpLive] = useState<boolean>(false);
+  const [opLive, setOpLive] = useState(false);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshAudit = useCallback(async () => {
     try {
@@ -47,24 +49,101 @@ export default function Home() {
     })();
   }, [refreshAudit]);
 
-  const run = useCallback(
+  // Animate the revealed events whenever a new result lands.
+  useEffect(() => {
+    if (timer.current) clearInterval(timer.current);
+    if (!result) {
+      setVisibleCount(0);
+      return;
+    }
+    setVisibleCount(0);
+    let n = 0;
+    timer.current = setInterval(() => {
+      n += 1;
+      setVisibleCount(n);
+      if (n >= result.events.length && timer.current) clearInterval(timer.current);
+    }, EVENT_DELAY);
+    return () => {
+      if (timer.current) clearInterval(timer.current);
+    };
+  }, [result]);
+
+  const playOne = useCallback(
+    async (res: AgentActResult) => {
+      setThinking(false);
+      setResult(res);
+      // Wait for the reveal animation to finish before moving on.
+      await sleep(res.events.length * EVENT_DELAY + 700);
+    },
+    [],
+  );
+
+  const autopilot = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.resetDemo();
+      setResult(null);
+      setDecisions({});
+      await refreshAudit();
+      for (const r of requests) {
+        setRunningId(r.id);
+        setThinking(true);
+        const res = await api.actAgent(r.id);
+        await playOne(res);
+        setDecisions((d) => ({ ...d, [r.id]: res.decision }));
+        await refreshAudit();
+        await sleep(600);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Autopilot failed");
+    } finally {
+      setThinking(false);
+      setRunningId(null);
+      setBusy(false);
+    }
+  }, [requests, refreshAudit, playOne]);
+
+  const runOne = useCallback(
     async (id: string) => {
       setBusy(true);
       setRunningId(id);
+      setThinking(true);
       setError(null);
       try {
-        const res = await api.runAgent(id);
-        setResult(res);
+        const res = await api.actAgent(id);
+        await playOne(res);
         setDecisions((d) => ({ ...d, [id]: res.decision }));
         await refreshAudit();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Run failed");
       } finally {
-        setBusy(false);
+        setThinking(false);
         setRunningId(null);
+        setBusy(false);
       }
     },
-    [refreshAudit],
+    [refreshAudit, playOne],
+  );
+
+  const sendAttack = useCallback(
+    async (body: string) => {
+      setBusy(true);
+      setRunningId(null);
+      setThinking(true);
+      setError(null);
+      try {
+        const res = await api.actAgentBody(body, "Attack arena");
+        await playOne(res);
+        await refreshAudit();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Attack run failed");
+      } finally {
+        setThinking(false);
+        setBusy(false);
+      }
+    },
+    [refreshAudit, playOne],
   );
 
   const reset = useCallback(async () => {
@@ -90,15 +169,13 @@ export default function Home() {
             Spend<span className="text-accent">Guard</span>
           </h1>
           <p className="text-sm text-muted">
-            Let agents spend without holding the keys.
+            An autonomous agent that can spend — but never holds the keys.
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           <span className="pill bg-ok/10 text-ok">Secret visible to model: No</span>
           <span
-            className={`pill ${
-              opLive ? "bg-ok/15 text-ok" : "bg-warn/15 text-warn"
-            }`}
+            className={`pill ${opLive ? "bg-ok/15 text-ok" : "bg-warn/15 text-warn"}`}
           >
             1Password: {opLive ? "live runtime broker" : "mock (no token)"}
           </span>
@@ -129,12 +206,25 @@ export default function Home() {
             decisions={decisions}
             runningId={runningId}
             busy={busy}
-            onRun={run}
+            onRun={runOne}
+            onAutopilot={autopilot}
+            onAttack={sendAttack}
             onReset={reset}
           />
         </section>
         <section className="col-span-12 min-h-0 md:col-span-5">
-          <TracePanel result={result} running={busy && !!runningId} />
+          <AgentTracePanel
+            result={result}
+            visibleCount={visibleCount}
+            running={thinking}
+            runningTitle={
+              runningId
+                ? requests.find((r) => r.id === runningId)?.title
+                : thinking
+                  ? "attack arena"
+                  : null
+            }
+          />
         </section>
         <section className="col-span-12 min-h-0 md:col-span-4">
           <AuthorityPanel result={result} audit={audit} />

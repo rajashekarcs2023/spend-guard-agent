@@ -1,4 +1,9 @@
-import type { AgentRunResponse, AuditEntry, SeedRequest } from "./types";
+import type {
+  AgentActResult,
+  AgentRunResponse,
+  AuditEntry,
+  SeedRequest,
+} from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
@@ -29,6 +34,16 @@ export const api = {
     http<AgentRunResponse>("/agent/run", {
       method: "POST",
       body: JSON.stringify({ request_id }),
+    }),
+  actAgent: (request_id: string) =>
+    http<AgentActResult>("/agent/act", {
+      method: "POST",
+      body: JSON.stringify({ request_id }),
+    }),
+  actAgentBody: (body: string, title?: string) =>
+    http<AgentActResult>("/agent/act", {
+      method: "POST",
+      body: JSON.stringify({ body, title }),
     }),
   getAudit: () => http<AuditEntry[]>("/audit"),
   resetDemo: () => http<{ status: string }>("/demo/reset", { method: "POST" }),

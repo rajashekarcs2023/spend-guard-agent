@@ -228,33 +228,6 @@ lifetime (mounted via a UNIX pipe, never written to disk, untrackable by Git).
 
 ---
 
-## Demo script (~2 minutes)
-
-The agent runs **autonomously** — you click once, it works the inbox itself.
-
-1. **Show the dashboard** — left: inbox + autopilot + attack arena, middle: the
-   agent's live trace, right: authority & audit. Header shows *Secret visible to
-   model: No* and the green *1Password: live runtime broker* badge.
-2. **Click ▶ Run agent (autopilot).** The agent reads each item and acts on its
-   own. Watch the 🤖 agent propose tool calls and the 🛡️ gateway adjudicate:
-   - **SnackHub $42** → agent calls `pay_invoice` → **ALLOWED** → credential
-     brokered **just-in-time** from 1Password, worker runs **inside a Daytona
-     sandbox**, key discarded. Right panel shows the issued→revoked JIT window.
-   - **EventSuppliesCo $76** → `create_order` → **ALLOWED**, same pattern.
-   - **Suspicious $900** → the agent is hijacked by the email and actually calls
-     `send_payment(EvilVendor, 900)` **and** `read_credential(STRIPE_SECRET_KEY)`
-     → the gateway **DENIES both**. No sandbox, no credential, no worker.
-3. **The money line:** *"Same agent. It just paid two invoices. Then an email
-   told it to leak the key and pay an attacker — it tried, and couldn't. It never
-   held the authority, and the key was never in its context."*
-4. **Attack arena** — let a judge type their own injection and hit *Send attack
-   to agent*. It fails live, every time.
-5. **Point at the audit log** — every action attributed; **no secret anywhere**.
-
-Full narration: [`spendguard/docs/DEMO_SCRIPT.md`](spendguard/docs/DEMO_SCRIPT.md).
-
----
-
 ## Security invariants (enforced + tested)
 
 1. The model never sees the payment secret.
